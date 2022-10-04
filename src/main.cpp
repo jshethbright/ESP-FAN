@@ -366,7 +366,6 @@ void setup() {
     LIGHT_STATE_DICT->insert(LIGHT_OFF_BITS, "0");
     LIGHT_STATE_DICT->insert(LIGHT_ON_BITS, "1");
 
-    pinMode(button, INPUT_PULLUP);
     Serial.begin(9600);
     setup_wifi();
     client.setServer(MQTT_BROKER, 1883);
