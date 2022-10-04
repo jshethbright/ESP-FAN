@@ -6,7 +6,7 @@
 #include "Dictionary.h"
 #include "Secrets.h"
 
-//int RX_PIN; // int for Receive RX_PIN.
+// int RX_PIN; // int for Receive RX_PIN.
 int RX_PIN;
 int TX_PIN;
 
@@ -18,12 +18,12 @@ int button = 0;
 float FREQUENCY = 304.0;
 int RF_REPEAT = 3;
 
-const char* SSID = SECRET_SSID;
-const char* PASSWORD = SECRET_PASSWORD;
-const char* MQTT_BROKER = SECRET_MQTT_BROKER_IP;
+const char *SSID = SECRET_SSID;
+const char *PASSWORD = SECRET_PASSWORD;
+const char *MQTT_BROKER = SECRET_MQTT_BROKER_IP;
 
-const char* MQTT_USERNAME = SECRET_MQTT_USERNAME;
-const char* MQTT_PASSWORD = SECRET_MQTT_PASSWORD;
+const char *MQTT_USERNAME = SECRET_MQTT_USERNAME;
+const char *MQTT_PASSWORD = SECRET_MQTT_PASSWORD;
 
 String FAN_CODE = "1100";
 String PREFIX_BITS = "111111000110";
@@ -48,7 +48,6 @@ Dictionary *LIGHT_STATE_DICT = new Dictionary();
 
 long prevMessage;
 
-
 int FAN_ID_START = 12;
 int FAN_ID_END = 16;
 
@@ -58,12 +57,11 @@ int ITEM_IND_END = 22;
 int STATE_IND_START = 22;
 int STATE_IND_END = 24;
 
-
 WiFiClient espClient;
 PubSubClient client(espClient);
 RCSwitch mySwitch = RCSwitch();
 
-void setup_wifi() 
+void setup_wifi()
 {
 
     delay(10);
@@ -81,15 +79,11 @@ void setup_wifi()
         Serial.print(".");
     }
 
-    randomSeed(micros());
-
     Serial.println("");
     Serial.println("WiFi connected");
     Serial.println("IP address: ");
     Serial.println(WiFi.localIP());
 }
-
-
 
 void reconnect()
 {
@@ -115,8 +109,6 @@ void reconnect()
         }
     }
 }
-
-
 
 static char *dec2binWzerofill(unsigned long Dec, unsigned int bitLength)
 {
@@ -145,58 +137,66 @@ static char *dec2binWzerofill(unsigned long Dec, unsigned int bitLength)
     return bin;
 }
 
-const char* constructSendBits(String prefixBits, String fanCodeBits, String specialControlBits, String itemBits, String stateBits) {
+const char *constructSendBits(String prefixBits, String fanCodeBits, String specialControlBits, String itemBits, String stateBits)
+{
     String out = prefixBits;
-    
+
     out = out + fanCodeBits;
     out = out + specialControlBits;
     out = out + itemBits;
     out = out + stateBits;
-    
+
     return out.c_str();
 }
 
-String getFanID(const char* bits, int fanIndStart, int fanIndEnd) {
+String getFanID(const char *bits, int fanIndStart, int fanIndEnd)
+{
     String stringBits = String(bits);
     return stringBits.substring(fanIndStart, fanIndEnd);
 }
 
-String getSpeedInfo(const char* bits, int stateIndStart, int stateIndEnd) {
+String getSpeedInfo(const char *bits, int stateIndStart, int stateIndEnd)
+{
     String stringBits = String(bits);
 
     String info = stringBits.substring(stateIndStart, stateIndEnd);
     return FAN_SPEED_DICT->search(info);
 }
 
-String getItemInfo(const char* bits, int itemIndStart, int itemIndEnd) {
+String getItemInfo(const char *bits, int itemIndStart, int itemIndEnd)
+{
     String stringBits = String(bits);
     return stringBits.substring(itemIndStart, itemIndEnd);
 }
 
-String getLightInfo(const char* bits, int stateIndStart, int stateIndEnd) {
+String getLightInfo(const char *bits, int stateIndStart, int stateIndEnd)
+{
     String stringBits = String(bits);
 
     String info = stringBits.substring(stateIndStart, stateIndEnd);
     return LIGHT_STATE_DICT->search(info);
 }
 
-
-
-struct infoStruct {
+struct infoStruct
+{
     String fanId;
     String endTopic;
     String state;
 };
 
-infoStruct deconReceiveBits(const char* bits) {
+infoStruct deconReceiveBits(const char *bits)
+{
     String endTopic;
     String state;
     String fanId = getFanID(bits, FAN_ID_START, FAN_ID_END);
     String itemBits = getItemInfo(bits, ITEM_IND_START, ITEM_IND_END);
-    if (itemBits.equals(String(ITEM_LIGHT_CONTROL_BITS))) {
+    if (itemBits.equals(String(ITEM_LIGHT_CONTROL_BITS)))
+    {
         endTopic = "light";
         state = getLightInfo(bits, STATE_IND_START, STATE_IND_END);
-    } else if (itemBits.equals(String(ITEM_FAN_CONTROL_BITS))) {
+    }
+    else if (itemBits.equals(String(ITEM_FAN_CONTROL_BITS)))
+    {
         endTopic = "speed";
         state = getSpeedInfo(bits, STATE_IND_START, STATE_IND_END);
     }
@@ -208,25 +208,28 @@ infoStruct deconReceiveBits(const char* bits) {
     return out;
 }
 
-void doPublishState(infoStruct msgInfo) {
+void doPublishState(infoStruct msgInfo)
+{
     String currTopic = "fan/" + msgInfo.fanId + "/" + msgInfo.endTopic;
 
     currTopic.replace("set", "");
     currTopic.toLowerCase();
-    const char* publishTopic = currTopic.c_str();
+    const char *publishTopic = currTopic.c_str();
     client.publish(publishTopic, msgInfo.state.c_str(), true);
 }
 
+void receiveBits()
+{
 
-void receiveBits() {
-    
-    if (mySwitch.available()) {
-        long value =  mySwitch.getReceivedValue();        // save received Value
-        if (value != prevMessage) {
-            int prot = mySwitch.getReceivedProtocol();     // save received Protocol
-            int bitlen = mySwitch.getReceivedBitlength();     // save received Bitlength
+    if (mySwitch.available())
+    {
+        long value = mySwitch.getReceivedValue(); // save received Value
+        if (value != prevMessage)
+        {
+            int prot = mySwitch.getReceivedProtocol();    // save received Protocol
+            int bitlen = mySwitch.getReceivedBitlength(); // save received Bitlength
 
-            char* bits = dec2binWzerofill(value, bitlen);
+            char *bits = dec2binWzerofill(value, bitlen);
             Serial.println(bits);
             infoStruct msgInfo = deconReceiveBits(bits);
             doPublishState(msgInfo);
@@ -237,27 +240,26 @@ void receiveBits() {
     }
 }
 
-
-
-
-void transmitBits(const char* sendBits) {
-    ELECHOUSE_cc1101.SetTx();           // set Transmit on
+void transmitBits(const char *sendBits)
+{
+    ELECHOUSE_cc1101.SetTx(); // set Transmit on
 
     mySwitch.enableTransmit(TX_PIN);
     mySwitch.setRepeatTransmit(RF_REPEAT);
     mySwitch.setProtocol(PROTOCOL);
     mySwitch.setPulseLength(PULSE_LENGTH);
 
-    mySwitch.send(sendBits);      // send 24 bit code
-    
-    mySwitch.disableTransmit();   
+    mySwitch.send(sendBits); // send 24 bit code
+
+    mySwitch.disableTransmit();
     ELECHOUSE_cc1101.setSidle();
     delay(100);
     ELECHOUSE_cc1101.SetRx(FREQUENCY);
     mySwitch.enableReceive(RX_PIN);
 }
 
-void setFanState(String fanCode, int speed) {
+void setFanState(String fanCode, int speed)
+{
     String prefixBits = PREFIX_BITS;
     String fanCodeBits = fanCode;
     String specialControlBits = SPECIAL_OTHER_CONTROL_BITS;
@@ -265,39 +267,44 @@ void setFanState(String fanCode, int speed) {
     String stateBits = FAN_OFF_BITS;
 
     stateBits = FAN_SPEED_DICT->key(speed);
-    
 
-    const char* message = constructSendBits(prefixBits, fanCodeBits, specialControlBits, itemBits, stateBits);
+    const char *message = constructSendBits(prefixBits, fanCodeBits, specialControlBits, itemBits, stateBits);
     transmitBits(message);
 }
 
-void setLightState(String fanCode, int state) {
+void setLightState(String fanCode, int state)
+{
     String prefixBits = PREFIX_BITS;
     String fanCodeBits = fanCode;
     String specialControlBits = SPECIAL_OTHER_CONTROL_BITS;
     String itemBits = ITEM_LIGHT_CONTROL_BITS;
     String stateBits = LIGHT_OFF_BITS;
-    if (state == 1) {
+    if (state == 1)
+    {
         stateBits = LIGHT_ON_BITS;
-    } else {
+    }
+    else
+    {
         stateBits = LIGHT_OFF_BITS;
     }
-    const char* message = constructSendBits(prefixBits, fanCodeBits, specialControlBits, itemBits, stateBits);
+    const char *message = constructSendBits(prefixBits, fanCodeBits, specialControlBits, itemBits, stateBits);
     transmitBits(message);
 }
 
-void setRotateColorState(String fanCode) {
+void setRotateColorState(String fanCode)
+{
     String prefixBits = PREFIX_BITS;
     String fanCodeBits = FAN_CODE;
     String specialControlBits = SPECIAL_COLOR_CONTROL_BITS;
     String itemBits = ITEM_OTHER_CONTROL_BITS;
     String stateBits = CHANGE_COLOR_BITS;
 
-    const char* message = constructSendBits(prefixBits, fanCodeBits, specialControlBits, itemBits, stateBits);
+    const char *message = constructSendBits(prefixBits, fanCodeBits, specialControlBits, itemBits, stateBits);
     transmitBits(message);
 }
 
-infoStruct getSendMessageInfo(char *topic, byte *payload) {
+infoStruct getSendMessageInfo(char *topic, byte *payload)
+{
     String topicStr = String(topic);
 
     String state = String((char)payload[0]);
@@ -317,14 +324,20 @@ infoStruct getSendMessageInfo(char *topic, byte *payload) {
     return out;
 }
 
-void executeSend(infoStruct sendMsgInfo) {
-    if (sendMsgInfo.endTopic.equals("setLight")) {
+void executeSend(infoStruct sendMsgInfo)
+{
+    if (sendMsgInfo.endTopic.equals("setLight"))
+    {
         setLightState(sendMsgInfo.fanId, sendMsgInfo.state.toInt());
         doPublishState(sendMsgInfo);
-    } else if (sendMsgInfo.endTopic.equals("setSpeed")) {
+    }
+    else if (sendMsgInfo.endTopic.equals("setSpeed"))
+    {
         setFanState(sendMsgInfo.fanId, sendMsgInfo.state.toInt());
         doPublishState(sendMsgInfo);
-    } else if (sendMsgInfo.endTopic.equals("setColor")) {
+    }
+    else if (sendMsgInfo.endTopic.equals("setColor"))
+    {
         setRotateColorState(sendMsgInfo.fanId);
         doPublishState(sendMsgInfo);
     }
@@ -343,20 +356,20 @@ void callback(char *topic, byte *payload, unsigned int length)
 
     infoStruct sendMsgInfo = getSendMessageInfo(topic, payload);
     executeSend(sendMsgInfo);
-    
 }
 
-void setup() {
-    #ifdef ESP32
-        RX_PIN = 4;  // for esp32! Receiver on GPIO RX_PIN 4.
-        TX_PIN = 2;
-    #elif ESP8266
-        RX_PIN = 4;  // for esp8266! Receiver on RX_PIN 4 = D2.
-        TX_PIN = 5;
-    #else
-        RX_PIN = 0;  // for Arduino! Receiver on interrupt 0 => that is RX_PIN #2
-        TX_PIN = 6;
-    #endif
+void setup()
+{
+#ifdef ESP32
+    RX_PIN = 4; // for esp32! Receiver on GPIO RX_PIN 4.
+    TX_PIN = 2;
+#elif ESP8266
+    RX_PIN = 4; // for esp8266! Receiver on RX_PIN 4 = D2.
+    TX_PIN = 5;
+#else
+    RX_PIN = 0; // for Arduino! Receiver on interrupt 0 => that is RX_PIN #2
+    TX_PIN = 6;
+#endif
 
     FAN_SPEED_DICT->insert(FAN_OFF_BITS, "0");
     FAN_SPEED_DICT->insert(FAN_LOW_BITS, "1");
@@ -371,19 +384,21 @@ void setup() {
     client.setServer(MQTT_BROKER, 1883);
     client.setCallback(callback);
 
-
-    if (ELECHOUSE_cc1101.getCC1101()){       // Check the CC1101 Spi connection.
+    if (ELECHOUSE_cc1101.getCC1101())
+    { // Check the CC1101 Spi connection.
         Serial.println("Connection OK");
-    }else{
+    }
+    else
+    {
         Serial.println("Connection Error");
     }
 
     ELECHOUSE_cc1101.Init();            // must be set to initialize the cc1101!
     ELECHOUSE_cc1101.setMHZ(FREQUENCY); // Here you can set your basic frequency. The lib calculates the frequency automatically (default = 433.92).The cc1101 can: 300-348 MHZ, 387-464MHZ and 779-928MHZ. Read More info from datasheet.
 
-    mySwitch.enableReceive(RX_PIN);  // Receiver on interrupt 0 => that is RX_PIN #2
+    mySwitch.enableReceive(RX_PIN); // Receiver on interrupt 0 => that is RX_PIN #2
 
-    ELECHOUSE_cc1101.SetRx();  // set Receive on
+    ELECHOUSE_cc1101.SetRx(); // set Receive on
 }
 
 void loop()
